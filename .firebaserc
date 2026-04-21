@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "sportgaurd"
-  }
+    "default": "sportguard-ai-7a73a"
+  },
+  "targets": {},
+  "etags": {}
 }

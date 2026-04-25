@@ -58,6 +58,9 @@ IMPORTANT RULES:
 - Official team or league websites → NOT violations
 - News websites → usually NOT violations
 - Random blogs, reposts, piracy → likely violations
+- Major sports news outlets like ESPN, BBC Sport, Sky Sports → score very low (0.1)
+- Social media reshares without proper licensing → score high (0.85+)
+- Unknown websites reposting sports content without attribution → score 0.9+
 
 ORIGINAL IMAGE DATA (JSON):
 ${asset.fingerprintText}
@@ -108,6 +111,7 @@ Return ONLY JSON:
         similarityScore: scoring.confidence,
         severity: scoring.severity,
         reason: scoring.reason,
+	geminiExplanation: scoring.reason,
         status: "unresolved",
         detectedAt: admin.firestore.FieldValue.serverTimestamp(),
       });

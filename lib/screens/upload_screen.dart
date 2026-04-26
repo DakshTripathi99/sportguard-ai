@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_ap/screens/assets_violations_screen.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -38,43 +39,141 @@ class _UploadScreenState extends State<UploadScreen> {
     });
   }
 
+  // Future<void> _pickAndUpload() async {
+  //   final result = await FilePicker.platform.pickFiles(type: FileType.media);
+
+  //   if (result != null) {
+  //     final file = result.files.first;
+  //     setState(() {
+  //       isUploading = true;
+  //       uploadProgress = 0.0;
+  //       uploadStatus = 'Initializing upload...';
+  //     });
+
+  //     await Future.delayed(const Duration(milliseconds: 500));
+  //     setState(() {
+  //       uploadProgress = 0.3;
+  //       uploadStatus = 'Extracting fingerprint...';
+  //     });
+
+  //     await Future.delayed(const Duration(milliseconds: 800));
+  //     setState(() {
+  //       uploadProgress = 0.7;
+  //       uploadStatus = 'Securing in database...';
+  //     });
+
+  //     final user = FirebaseAuth.instance.currentUser;
+  //     if (user != null) {
+  //       final docRef = FirebaseFirestore.instance.collection('assets').doc();
+  //       await docRef.set({
+  //         'assetId': docRef.id,
+  //         'fileName': file.name,
+  //         'fileSize': file.size,
+  //         'uploadedAt': FieldValue.serverTimestamp(),
+  //         'ownerId': user.uid,
+  //         'status': 'active',
+  //       });
+  //     }
+
+  //     await Future.delayed(const Duration(milliseconds: 500));
+  //     setState(() {
+  //       uploadProgress = 1.0;
+  //       uploadStatus = 'Upload Complete!';
+  //       isUploading = false;
+  //     });
+
+  //     _fetchAssets();
+
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('${file.name} is now protected!')),
+  //       );
+  //     }
+  //   }
+  // }
+
   Future<void> _pickAndUpload() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.media);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.media,
+      withData: true, // important for web — loads bytes into memory
+    );
 
     if (result != null) {
       final file = result.files.first;
+      final bytes = file.bytes; // web uses bytes, not path
+
+      if (bytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read file bytes.')),
+        );
+        return;
+      }
+
       setState(() {
         isUploading = true;
         uploadProgress = 0.0;
         uploadStatus = 'Initializing upload...';
       });
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Create Firestore doc first to get the ID
+      final docRef = FirebaseFirestore.instance.collection('assets').doc();
+      final assetId = docRef.id;
+
       setState(() {
-        uploadProgress = 0.3;
-        uploadStatus = 'Extracting fingerprint...';
+        uploadProgress = 0.2;
+        uploadStatus = 'Uploading to secure storage...';
       });
 
-      await Future.delayed(const Duration(milliseconds: 800));
+      // Upload actual file bytes to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('assets')
+          .child(user.uid)
+          .child('$assetId-${file.name}');
+
+      final uploadTask = storageRef.putData(
+        bytes,
+        SettableMetadata(
+          contentType: file.extension != null
+              ? 'image/${file.extension}'
+              : 'application/octet-stream',
+        ),
+      );
+
+      // Listen to upload progress
+      uploadTask.snapshotEvents.listen((snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        setState(() {
+          uploadProgress = 0.2 + (progress * 0.6); // scale to 20%-80%
+          uploadStatus = 'Uploading... ${(progress * 100).toInt()}%';
+        });
+      });
+
+      // Wait for upload to complete and get download URL
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
       setState(() {
-        uploadProgress = 0.7;
+        uploadProgress = 0.9;
         uploadStatus = 'Securing in database...';
       });
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final docRef = FirebaseFirestore.instance.collection('assets').doc();
-        await docRef.set({
-          'assetId': docRef.id,
-          'fileName': file.name,
-          'fileSize': file.size,
-          'uploadedAt': FieldValue.serverTimestamp(),
-          'ownerId': user.uid,
-          'status': 'active',
-        });
-      }
+      // Now save metadata to Firestore including the storage URL
+      await docRef.set({
+        'assetId': assetId,
+        'fileName': file.name,
+        'fileSize': file.size,
+        'uploadedAt': FieldValue.serverTimestamp(),
+        'ownerId': user.uid,
+        'status': 'active',
+        'storagePath':
+            storageRef.fullPath, // ← this is what onAssetUploaded needs
+        'downloadUrl': downloadUrl,
+      });
 
-      await Future.delayed(const Duration(milliseconds: 500));
       setState(() {
         uploadProgress = 1.0;
         uploadStatus = 'Upload Complete!';

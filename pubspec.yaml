@@ -108,3 +108,6 @@ flutter_launcher_icons:
   web:
     generate: true
   image_path: 'assets/icon.png'
+
+  dependencies:
+    firebase_storage: ^12.0.0

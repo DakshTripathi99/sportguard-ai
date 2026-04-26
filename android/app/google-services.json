@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1010188362147",
+    "firebase_url": "https://sportguard-ai-7a73a-default-rtdb.firebaseio.com",
+    "project_id": "sportguard-ai-7a73a",
+    "storage_bucket": "sportguard-ai-7a73a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1010188362147:android:fe5b404094074f90753a16",
+        "android_client_info": {
+          "package_name": "com.example.flutter_ap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXfOaC2pYUZkzOhZv-8t8xapAfLYpCInY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

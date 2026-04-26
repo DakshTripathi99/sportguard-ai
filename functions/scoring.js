@@ -13,9 +13,11 @@ const WHITELISTED_DOMAINS = [
   "bbc.co.uk",
   "uefa.com",
   "nba.com",
+  "youtube.com",
+  "youtu.be"
 ];
 
-// Stock / licensed platforms (VERY IMPORTANT)
+// Stock / licensed platforms
 const STOCK_DOMAINS = [
   "gettyimages.com",
   "shutterstock.com",
@@ -36,15 +38,15 @@ async function scoreViolation(asset, matchUrl, matchScore) {
     }
 
     // ===============================
-    // STEP 2: Skip stock platforms
+    // STEP 2: Skip licensed platforms
     // ===============================
     if (STOCK_DOMAINS.some((s) => domain.includes(s))) {
-      console.log("✅ Licensed platform — skipping:", domain);
+      console.log("✅ Licensed platform:", domain);
       return null;
     }
 
     // ===============================
-    // STEP 3: Gemini evaluation
+    // STEP 3: Gemini evaluation (FIXED PROMPT)
     // ===============================
     const model = genai.getGenerativeModel({
       model: "gemini-2.5-flash",
@@ -53,13 +55,20 @@ async function scoreViolation(asset, matchUrl, matchScore) {
     const prompt = `
 You are an AI that detects UNAUTHORIZED use of sports media.
 
-IMPORTANT RULES:
-- Official stock platforms (Getty, Shutterstock, Reuters, AP) → NOT violations
-- Official team or league websites → NOT violations
-- News websites → usually NOT violations
-- Random blogs, reposts, piracy → likely violations
+STRICT RULES (FOLLOW CAREFULLY):
 
-ORIGINAL IMAGE DATA (JSON):
+- YouTube, Instagram, Facebook → usually NOT violations unless clearly pirated
+- Official sports/news platforms (ESPN, BBC, FIFA, UEFA) → NOT violations
+- Licensed platforms (Getty, Reuters, Shutterstock) → NOT violations
+- Blogs, unknown domains, piracy sites → LIKELY violations
+
+IMPORTANT:
+Be CONSERVATIVE.
+If unsure → return isUnauthorized = false.
+
+Only mark as violation if HIGH confidence (>0.75).
+
+ORIGINAL IMAGE DATA:
 ${asset.fingerprintText}
 
 MATCH URL:
@@ -68,7 +77,7 @@ ${matchUrl}
 DOMAIN:
 ${domain}
 
-VISION SIMILARITY SCORE:
+SIMILARITY SCORE:
 ${matchScore}
 
 Return ONLY JSON:
@@ -97,7 +106,20 @@ Return ONLY JSON:
     console.log("🧠 AI Decision:", scoring);
 
     // ===============================
-    // STEP 4: Save violation
+    // STEP 4: EXTRA SAFETY FILTER (CRITICAL)
+    // ===============================
+    if (
+      (domain.includes("youtube.com") ||
+        domain.includes("instagram.com") ||
+        domain.includes("facebook.com")) &&
+      scoring.confidence < 0.85
+    ) {
+      console.log("⚠️ Social media filtered:", domain);
+      return null;
+    }
+
+    // ===============================
+    // STEP 5: Save violation
     // ===============================
     if (scoring.isUnauthorized && scoring.confidence > 0.75) {
       await db().collection("violations").add({
@@ -108,6 +130,7 @@ Return ONLY JSON:
         similarityScore: scoring.confidence,
         severity: scoring.severity,
         reason: scoring.reason,
+        geminiExplanation: scoring.reason,
         status: "unresolved",
         detectedAt: admin.firestore.FieldValue.serverTimestamp(),
       });

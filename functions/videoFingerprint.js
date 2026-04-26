@@ -1,39 +1,61 @@
 const videoIntelligence = require("@google-cloud/video-intelligence");
+const admin = require("firebase-admin");
 
 const videoClient = new videoIntelligence.VideoIntelligenceServiceClient();
+const db = () => admin.firestore();
 
 async function fingerprintVideo(assetId, videoUrl) {
-  console.log("í¾¥ Video fingerprint:", assetId);
+  console.log(" Starting video fingerprint:", assetId);
 
-  const [operation] = await videoClient.annotateVideo({
-    inputUri: videoUrl,
-    features: [
-      "LABEL_DETECTION",
-      "LOGO_RECOGNITION",
-      "SHOT_CHANGE_DETECTION",
-    ],
-  });
+  try {
+    const [operation] = await videoClient.annotateVideo({
+      inputUri: videoUrl,
+      features: [
+        "LABEL_DETECTION",
+        "LOGO_RECOGNITION",
+        "SHOT_CHANGE_DETECTION",
+      ],
+    });
 
-  console.log("â³ Processing video...");
-  const [result] = await operation.promise();
+    console.log(" Processing video...");
 
-  const annotations = result.annotationResults[0];
+    const [result] = await operation.promise();
 
-  const logos =
-    annotations.logoRecognitionAnnotations?.map(
-      (l) => l.entity.description
-    ) || [];
+    const annotations = result.annotationResults[0];
 
-  const labels =
-    annotations.segmentLabelAnnotations?.map(
-      (l) => l.entity.description
-    ) || [];
+    const logos =
+      annotations.logoRecognitionAnnotations?.map(
+        (l) => l.entity.description
+      ) || [];
 
-  const shots = annotations.shotAnnotations || [];
+    const labels =
+      annotations.segmentLabelAnnotations?.map(
+        (l) => l.entity.description
+      ) || [];
 
-  console.log("í¾¬ Shots:", shots.length);
+    const shots = annotations.shotAnnotations || [];
 
-  return { logos, labels, shotCount: shots.length };
+    console.log("Shots:", shots.length);
+
+    //  SAVE RESULT (CRITICAL)
+    await db().collection("assets").doc(assetId).update({
+      status: "active",
+      videoLabels: labels,
+      videoLogos: logos,
+      shotCount: shots.length,
+      fingerprintedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(" Video fingerprint saved:", assetId);
+
+  } catch (err) {
+    console.error(" Video fingerprint failed:", err.message);
+
+    await db().collection("assets").doc(assetId).update({
+      status: "error",
+      errorMessage: err.message,
+    });
+  }
 }
 
 module.exports = { fingerprintVideo };

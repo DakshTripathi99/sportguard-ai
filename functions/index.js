@@ -1,3 +1,6 @@
+// ===============================
+// IMPORTS
+// ===============================
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { onRequest } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -8,6 +11,7 @@ const { PubSub } = require("@google-cloud/pubsub");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const { fingerprintImage } = require("./fingerprint");
+const { fingerprintVideo } = require("./videoFingerprint");
 
 admin.initializeApp();
 
@@ -16,7 +20,7 @@ const ps = new PubSub();
 
 
 // ===============================
-// 🔥 STORAGE TRIGGER
+//  STORAGE TRIGGER (IMAGE + VIDEO)
 // ===============================
 exports.onAssetUploaded = onObjectFinalized(
   {
@@ -54,26 +58,43 @@ exports.onAssetUploaded = onObjectFinalized(
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      await ps.topic("fingerprint-jobs").publish(
-        Buffer.from(
-          JSON.stringify({
-            assetId,
-            downloadUrl: url,
-          })
-        )
-      );
+      console.log(" Upload detected:", object.contentType);
 
-      console.log("✅ Asset uploaded:", assetId);
+      // ===============================
+      //  VIDEO vs IMAGE ROUTING
+      // ===============================
+      if (object.contentType && object.contentType.startsWith("video/")) {
+        console.log(" Processing VIDEO");
+
+        // Use GCS path (required for Video API)
+        const gcsUri = `gs://${object.bucket}/${filePath}`;
+
+        await fingerprintVideo(assetId, gcsUri);
+
+      } else {
+        console.log(" Processing IMAGE");
+
+        await ps.topic("fingerprint-jobs").publish(
+          Buffer.from(
+            JSON.stringify({
+              assetId,
+              downloadUrl: url,
+            })
+          )
+        );
+      }
+
+      console.log(" Pipeline triggered:", assetId);
 
     } catch (error) {
-      console.error("❌ Upload error:", error.message);
+      console.error(" Upload error:", error.message);
     }
   }
 );
 
 
 // ===============================
-// 🔥 PUBSUB WORKER
+//  PUBSUB WORKER (IMAGE)
 // ===============================
 exports.processFingerprintJob = pubsub.onMessagePublished(
   {
@@ -89,19 +110,21 @@ exports.processFingerprintJob = pubsub.onMessagePublished(
         Buffer.from(event.data.message.data, "base64").toString()
       );
 
-      console.log("🔥 PubSub triggered");
+      console.log(" PubSub triggered (IMAGE)");
 
       await fingerprintImage(message.assetId, message.downloadUrl);
 
+      console.log(" Image processing done");
+
     } catch (error) {
-      console.error("❌ Fingerprint job error:", error.message);
+      console.error(" Fingerprint job error:", error.message);
     }
   }
 );
 
 
 // ===============================
-// 🔥 ANOMALY DETECTION (CRON)
+//  ANOMALY DETECTION (CRON)
 // ===============================
 exports.detectAnomalies = onSchedule(
   {
@@ -146,12 +169,12 @@ Explain briefly why this is suspicious and what it indicates.
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
           });
 
-          console.log("🚨 Anomaly detected:", assetId);
+          console.log(" Anomaly detected:", assetId);
         }
       }
 
     } catch (err) {
-      console.error("❌ Anomaly error:", err.message);
+      console.error(" Anomaly error:", err.message);
     }
 
     return null;
@@ -160,7 +183,7 @@ Explain briefly why this is suspicious and what it indicates.
 
 
 // ===============================
-// 🔥 REPORT GENERATOR
+//  REPORT GENERATOR
 // ===============================
 exports.generateViolationReport = onRequest(
   {
@@ -186,6 +209,11 @@ exports.generateViolationReport = onRequest(
       const assetDoc = await db.collection("assets").doc(assetId).get();
       const asset = assetDoc.data();
 
+      if (!asset) {
+        res.status(404).send("Asset not found");
+        return;
+      }
+
       const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genai.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -197,7 +225,7 @@ You are a legal AI assistant.
 Generate a professional IP infringement report.
 
 ASSET:
-${asset.fingerprintText}
+${asset.fingerprintText || "No fingerprint available"}
 
 TOTAL VIOLATIONS: ${violations.length}
 
@@ -216,7 +244,7 @@ Write a 3-paragraph legal report suitable for DMCA/legal action.
       });
 
     } catch (err) {
-      console.error("❌ Report error:", err.message);
+      console.error(" Report error:", err.message);
       res.status(500).send("Error generating report");
     }
   }
@@ -224,7 +252,7 @@ Write a 3-paragraph legal report suitable for DMCA/legal action.
 
 
 // ===============================
-// 🔥 MANUAL TEST
+//  MANUAL TEST
 // ===============================
 exports.triggerManualScan = onRequest(async (req, res) => {
   await ps.topic("fingerprint-jobs").publish(

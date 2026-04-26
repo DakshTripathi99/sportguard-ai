@@ -55,7 +55,18 @@ async function scoreViolation(asset, matchUrl, matchScore) {
     const prompt = `
 You are an AI that detects UNAUTHORIZED use of sports media.
 
+<<<<<<< HEAD
 STRICT RULES (FOLLOW CAREFULLY):
+=======
+IMPORTANT RULES:
+- Official stock platforms (Getty, Shutterstock, Reuters, AP) → NOT violations
+- Official team or league websites → NOT violations
+- News websites → usually NOT violations
+- Random blogs, reposts, piracy → likely violations
+- Major sports news outlets like ESPN, BBC Sport, Sky Sports → score very low (0.1)
+- Social media reshares without proper licensing → score high (0.85+)
+- Unknown websites reposting sports content without attribution → score 0.9+
+>>>>>>> 44aa50492853bbb47cc745aba495e2fc7d6efdf9
 
 - YouTube, Instagram, Facebook → usually NOT violations unless clearly pirated
 - Official sports/news platforms (ESPN, BBC, FIFA, UEFA) → NOT violations

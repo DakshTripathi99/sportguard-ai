@@ -3,7 +3,7 @@ import requests
 
 client = vision.ImageAnnotatorClient()
 
-# 🔥 Use a VERY common image
+#  Use a VERY common image
 image_url = "https://www.gstatic.com/webp/gallery/1.jpg"
 
 # Download bytes (more reliable than URL mode)

@@ -11,7 +11,7 @@ async function getTextEmbedding(text) {
     endpoint,
     instances: [
       {
-        content: text, // 🔥 THIS IS CRITICAL
+        content: text, //  THIS IS CRITICAL
       },
     ],
   };

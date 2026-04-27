@@ -57,19 +57,19 @@ async function scoreViolation(asset, matchUrl, matchScore) {
     try {
       domain = new URL(matchUrl).hostname.replace(/^www\./, "");
     } catch {
-      console.warn("⚠️ Invalid URL, skipping:", matchUrl);
+      console.warn(" Invalid URL, skipping:", matchUrl);
       return null;
     }
 
     // --- Gate 1: Whitelisted domains ---
     if (WHITELISTED_DOMAINS.some((w) => domain.includes(w))) {
-      console.log("✅ Whitelisted:", domain);
+      console.log("Whitelisted:", domain);
       return null;
     }
 
     // --- Gate 2: Licensed stock agencies ---
     if (STOCK_DOMAINS.some((s) => domain.includes(s))) {
-      console.log("✅ Licensed stock platform:", domain);
+      console.log(" Licensed stock platform:", domain);
       return null;
     }
 
@@ -82,7 +82,7 @@ async function scoreViolation(asset, matchUrl, matchScore) {
     // We only skip if the score is genuinely too low to be meaningful.
     // ---------------------------------------------------------------
     if (matchScore < 0.55) {
-      console.log(`⏭️ Skipped low similarity [${matchScore}]:`, domain);
+      console.log(` Skipped low similarity [${matchScore}]:`, domain);
       return null;
     }
 
@@ -134,11 +134,11 @@ Return ONLY valid JSON with no markdown fences or extra text:
     try {
       scoring = JSON.parse(text);
     } catch (err) {
-      console.error("❌ Gemini JSON parse failed:", text);
+      console.error(" Gemini JSON parse failed:", text);
       return null;
     }
 
-    console.log(`🧠 AI Decision [${domain}]:`, scoring);
+    console.log(` AI Decision [${domain}]:`, scoring);
 
     // ---------------------------------------------------------------
     // Combined score = blend of Vision similarity + Gemini confidence.
@@ -152,11 +152,11 @@ Return ONLY valid JSON with no markdown fences or extra text:
     const threshold = isSocial ? 0.78 : 0.65;
 
     console.log(
-      `📊 Scores — vision: ${matchScore}, ai: ${scoring.confidence}, combined: ${combinedScore.toFixed(3)}, threshold: ${threshold}`
+      ` Scores — vision: ${matchScore}, ai: ${scoring.confidence}, combined: ${combinedScore.toFixed(3)}, threshold: ${threshold}`
     );
 
     if (!scoring.isUnauthorized || combinedScore < threshold) {
-      console.log(`⏭️ Below threshold or not unauthorized — skipping:`, domain);
+      console.log(` Below threshold or not unauthorized — skipping:`, domain);
       return { isViolation: false, ...scoring };
     }
 
@@ -179,12 +179,12 @@ Return ONLY valid JSON with no markdown fences or extra text:
       detectedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log("🚨 Violation saved:", domain, `(combined: ${combinedScore.toFixed(3)})`);
+    console.log(" Violation saved:", domain, `(combined: ${combinedScore.toFixed(3)})`);
 
     return { isViolation: true, ...scoring, combinedScore };
 
   } catch (error) {
-    console.error("❌ Scoring failed:", error.message);
+    console.error(" Scoring failed:", error.message);
     return null;
   }
 }

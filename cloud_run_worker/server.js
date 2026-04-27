@@ -2,7 +2,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const vision = require('@google-cloud/vision');
 
-console.log("í´¥ Starting full scan worker...");
+console.log("ï¿½ï¿½ï¿½ Starting full scan worker...");
 
 admin.initializeApp({
   credential: admin.credential.applicationDefault(),
@@ -16,19 +16,19 @@ app.use(express.json());
 
 // health check
 app.get('/', (req, res) => {
-  res.send('Worker alive íº€');
+  res.send('Worker alive ï¿½ï¿½ï¿½');
 });
 
 // MAIN SCAN ENDPOINT
 app.post('/', async (req, res) => {
   try {
-    console.log("í´ Scan triggered");
+    console.log("ï¿½ï¿½ï¿½ Scan triggered");
 
     const assetsSnap = await db.collection('assets')
       .limit(10) // keep small for testing
       .get();
 
-    console.log(`í³¦ Found ${assetsSnap.size} assets`);
+    console.log(`ï¿½ï¿½ï¿½ Found ${assetsSnap.size} assets`);
 
     for (const doc of assetsSnap.docs) {
       const asset = doc.data();
@@ -37,17 +37,17 @@ app.post('/', async (req, res) => {
 
     res.status(200).send('Scan complete');
   } catch (err) {
-    console.error('âŒ Scan error:', err);
+    console.error(' Scan error:', err);
     res.status(500).send('Error during scan');
   }
 });
 
 async function scanAsset(asset) {
   try {
-    console.log(`í´Ž Scanning asset: ${asset.assetId}`);
+    console.log(`ï¿½ï¿½ï¿½ Scanning asset: ${asset.assetId}`);
 
     if (!asset.uploadUrl) {
-      console.log("âš ï¸ No uploadUrl, skipping");
+      console.log(" No uploadUrl, skipping");
       return;
     }
 
@@ -55,7 +55,7 @@ async function scanAsset(asset) {
     const webDetection = result.webDetection;
 
     if (!webDetection || !webDetection.pagesWithMatchingImages) {
-      console.log("âš ï¸ No matches found");
+      console.log(" No matches found");
       return;
     }
 
@@ -64,7 +64,7 @@ async function scanAsset(asset) {
       score: page.score || 0.5,
     }));
 
-    console.log(`âœ… Found ${matches.length} matches`);
+    console.log(` Found ${matches.length} matches`);
 
     await db.collection('rawMatches').add({
       assetId: asset.assetId,
@@ -74,12 +74,12 @@ async function scanAsset(asset) {
     });
 
   } catch (err) {
-    console.error(`âŒ Error scanning ${asset.assetId}:`, err);
+    console.error(` Error scanning ${asset.assetId}:`, err);
   }
 }
 
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`íº€ Server running on port ${PORT}`);
+  console.log(`ï¿½ï¿½ï¿½ Server running on port ${PORT}`);
 });

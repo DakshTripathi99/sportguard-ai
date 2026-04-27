@@ -11,7 +11,7 @@ const visionClient = new vision.ImageAnnotatorClient();
 const db = () => admin.firestore();
 
 async function fingerprintImage(assetId, downloadUrl) {
-  console.log("🚀 Starting fingerprint:", assetId);
+  console.log(" Starting fingerprint:", assetId);
 
   try {
     // ===============================
@@ -50,7 +50,7 @@ async function fingerprintImage(assetId, downloadUrl) {
     const webPages = webDetection.pagesWithMatchingImages || [];
 
     console.log(
-      `🌐 Vision results — full: ${fullMatches.length}, partial: ${partialMatches.length}, pages: ${webPages.length}`
+      ` Vision results — full: ${fullMatches.length}, partial: ${partialMatches.length}, pages: ${webPages.length}`
     );
 
     // Build a deduplicated, scored match list from the correct fields.
@@ -85,7 +85,7 @@ async function fingerprintImage(assetId, downloadUrl) {
     // Cap at 10 total to keep costs reasonable.
     const allMatches = [...imageMatches, ...pageOnlyMatches].slice(0, 10);
 
-    console.log(`🎯 Total scored matches to evaluate: ${allMatches.length}`);
+    console.log(` Total scored matches to evaluate: ${allMatches.length}`);
 
     // ===============================
     // STEP 2: Fetch image for Gemini
@@ -133,11 +133,11 @@ Return ONLY valid JSON with no markdown fences:
     try {
       fingerprintData = JSON.parse(geminiText);
     } catch (err) {
-      console.error("❌ Gemini JSON parse failed:", geminiText);
+      console.error(" Gemini JSON parse failed:", geminiText);
       throw new Error("Invalid Gemini JSON");
     }
 
-    console.log("✅ Structured fingerprint ready");
+    console.log(" Structured fingerprint ready");
 
     // ===============================
     // STEP 4: Score each match
@@ -146,7 +146,7 @@ Return ONLY valid JSON with no markdown fences:
 
     for (const match of allMatches) {
       try {
-        console.log(`🔍 Scoring [score=${match.score}]: ${match.url}`);
+        console.log(` Scoring [score=${match.score}]: ${match.url}`);
 
         const result = await scoreViolation(
           {
@@ -162,7 +162,7 @@ Return ONLY valid JSON with no markdown fences:
           violationCount++;
         }
       } catch (err) {
-        console.error("❌ Scoring error:", err.message);
+        console.error(" Scoring error:", err.message);
       }
     }
 
@@ -179,10 +179,10 @@ Return ONLY valid JSON with no markdown fences:
       fingerprintedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    console.log(`🎉 DONE: ${assetId} — violations found: ${violationCount}`);
+    console.log(` DONE: ${assetId} — violations found: ${violationCount}`);
 
   } catch (err) {
-    console.error("❌ FAILED:", err.message);
+    console.error(" FAILED:", err.message);
 
     try {
       await db().collection("assets").doc(assetId).update({

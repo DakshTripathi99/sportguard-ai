@@ -13,7 +13,7 @@ index = aiplatform.MatchingEngineIndex(
 # Create fake vector
 fake_vector = [0.1] * 768
 
-# 🔥 Correct way (NEW SDK)
+#  Correct way (NEW SDK)
 index.upsert_datapoints(
     datapoints=[
         {

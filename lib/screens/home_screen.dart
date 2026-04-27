@@ -83,7 +83,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.security, size: 100, color: Color(0xFFC2D099)),
+                      const Icon(
+                        Icons.security,
+                        size: 100,
+                        color: Color(0xFFC2D099),
+                      ),
                       const SizedBox(height: 20),
                       Text(
                         'Welcome $userName!',
@@ -125,23 +129,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       AnimatedHoverTile(
                         title: 'Upload Asset',
-                        subtitle: 'Protect new proprietary media by fingerprinting it securely into the database.',
+                        subtitle:
+                            'Protect new proprietary media by fingerprinting it securely into the database.',
                         icon: Icons.upload_file,
-                        gradientColors: const [Color(0xFF35858E), Color(0xFF7DA78C)],
+                        gradientColors: const [
+                          Color(0xFF35858E),
+                          Color(0xFF7DA78C),
+                        ],
                         onTap: () => _navigateToShell(context, 1),
                       ),
                       AnimatedHoverTile(
                         title: 'Violations',
-                        subtitle: 'Review and manage unauthorized usages of your protected digital media.',
+                        subtitle:
+                            'Review and manage unauthorized usages of your protected digital media.',
                         icon: Icons.warning_amber_rounded,
-                        gradientColors: const [Color(0xFF7DA78C), Color(0xFFC2D099)],
+                        gradientColors: const [
+                          Color(0xFF7DA78C),
+                          Color(0xFFC2D099),
+                        ],
                         onTap: () => _navigateToShell(context, 0),
                       ),
                       AnimatedHoverTile(
                         title: 'Analytics',
-                        subtitle: 'Track your overall protection metrics, resolution rates, and trends.',
+                        subtitle:
+                            'Track your overall protection metrics, resolution rates, and trends.',
                         icon: Icons.analytics_outlined,
-                        gradientColors: const [Color(0xFF35858E), Color(0xFFC2D099)],
+                        gradientColors: const [
+                          Color(0xFF35858E),
+                          Color(0xFFC2D099),
+                        ],
                         onTap: () => _navigateToShell(context, 2),
                       ),
                     ],
@@ -170,11 +186,19 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: EdgeInsets.zero,
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color(0xFF35858E),
+            decoration: const BoxDecoration(color: Color(0xFF35858E)),
+            accountName: Text(
+              userName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.white,
+              ),
             ),
-            accountName: Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-            accountEmail: Text(userEmail, style: const TextStyle(color: Color(0xFFE6EEC9))),
+            accountEmail: Text(
+              userEmail,
+              style: const TextStyle(color: Color(0xFFE6EEC9)),
+            ),
             currentAccountPicture: const CircleAvatar(
               backgroundColor: Color(0xFFC2D099),
               child: Icon(Icons.person, size: 40, color: Color(0xFF35858E)),
@@ -182,7 +206,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Log Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            title: const Text(
+              'Log Out',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             onTap: () async {
               await FirebaseAuth.instance.signOut();
             },
@@ -234,8 +264,12 @@ class _AnimatedHoverTileState extends State<AnimatedHoverTile> {
             borderRadius: BorderRadius.circular(24),
             gradient: LinearGradient(
               colors: [
-                widget.gradientColors[0].withValues(alpha: isHovered ? 0.9 : 0.8),
-                widget.gradientColors[1].withValues(alpha: isHovered ? 0.8 : 0.7),
+                widget.gradientColors[0].withValues(
+                  alpha: isHovered ? 0.9 : 0.8,
+                ),
+                widget.gradientColors[1].withValues(
+                  alpha: isHovered ? 0.8 : 0.7,
+                ),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -246,7 +280,7 @@ class _AnimatedHoverTileState extends State<AnimatedHoverTile> {
                   color: widget.gradientColors[0].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
-                )
+                ),
             ],
           ),
           child: SingleChildScrollView(
@@ -258,7 +292,9 @@ class _AnimatedHoverTileState extends State<AnimatedHoverTile> {
                   duration: const Duration(milliseconds: 300),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: isHovered ? 0.3 : 0.1),
+                    color: Colors.white.withValues(
+                      alpha: isHovered ? 0.3 : 0.1,
+                    ),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

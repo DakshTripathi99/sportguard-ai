@@ -139,7 +139,8 @@ class AssetViolationsScreen extends StatelessWidget {
                   itemBuilder: (ctx, i) {
                     final v = violations[i].data() as Map<String, dynamic>;
                     final docId = violations[i].id;
-                    final score = v['similarityScore']?.toDouble() ?? 0.0;
+                    final score =
+                        (v['similarityScore'] as num?)?.toDouble() ?? 0.0;
                     final scorePercent = (score * 100).round();
                     final color = _severityColor(v['severity'], score);
                     final detectedDate = v['detectedAt'] is Timestamp

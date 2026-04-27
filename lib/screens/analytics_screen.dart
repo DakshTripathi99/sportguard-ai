@@ -59,7 +59,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       // Step 1: get user's asset IDs
       final assetsSnapshot = await FirebaseFirestore.instance
           .collection('assets')
-          .where('ownerId', isEqualTo: user.uid)
+          .where('orgId', isEqualTo: user.uid)
           .get();
 
       final assetIds = assetsSnapshot.docs

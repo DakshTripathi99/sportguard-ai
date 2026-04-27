@@ -15,11 +15,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int currentIndex;
 
-  final screens = const [
-    DashboardScreen(),
-    UploadScreen(),
-    AnalyticsScreen(),
-  ];
+  final screens = const [DashboardScreen(), UploadScreen(), AnalyticsScreen()];
 
   @override
   void initState() {
@@ -31,10 +27,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFE6EEC9),
-      body: IndexedStack(
-        index: currentIndex,
-        children: screens,
-      ),
+      body: IndexedStack(index: currentIndex, children: screens),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF35858E),
         selectedItemColor: const Color(0xFFC2D099),
@@ -42,9 +35,18 @@ class _MainShellState extends State<MainShell> {
         currentIndex: currentIndex,
         onTap: (index) => setState(() => currentIndex = index),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Violations'),
-          BottomNavigationBarItem(icon: Icon(Icons.upload), label: 'Upload Asset'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytics'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Violations',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.upload),
+            label: 'Upload Asset',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: 'Analytics',
+          ),
         ],
       ),
     );

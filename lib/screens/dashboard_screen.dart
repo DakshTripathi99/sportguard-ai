@@ -11,7 +11,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Holds the assetIds belonging to the current user
   List<String> _userAssetIds = [];
   bool _loadingAssets = true;
 
@@ -21,7 +20,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _fetchUserAssetIds();
   }
 
-  /// Step 1: get all assetIds the user owns
   Future<void> _fetchUserAssetIds() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -31,7 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final snapshot = await FirebaseFirestore.instance
         .collection('assets')
-        .where('ownerId', isEqualTo: user.uid)
+        .where('orgId', isEqualTo: user.uid)
         .get();
 
     setState(() {
@@ -82,7 +80,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    // User has no uploaded assets yet
     if (_userAssetIds.isEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFFE6EEC9),
@@ -109,8 +106,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFE6EEC9),
       body: StreamBuilder<QuerySnapshot>(
-        // Step 2: only violations whose assetId matches one of the user's assets
-        // Firestore whereIn supports up to 30 values
         stream: FirebaseFirestore.instance
             .collection('violations')
             .where('assetId', whereIn: _userAssetIds)
@@ -168,7 +163,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   itemBuilder: (ctx, i) {
                     final v = violations[i].data() as Map<String, dynamic>;
                     final docId = violations[i].id;
-                    final score = ((v['similarityScore'] ?? 0) * 100).round();
+
+                    // Safe double parsing
+                    final similarityScore =
+                        (v['similarityScore'] as num?)?.toDouble() ?? 0.0;
+                    final score = (similarityScore * 100).round();
+
+                    // Safe date parsing
+                    String detectedOn = 'N/A';
+                    if (v['detectedAt'] is Timestamp) {
+                      detectedOn = (v['detectedAt'] as Timestamp)
+                          .toDate()
+                          .toString()
+                          .split('.')[0];
+                    }
 
                     return GestureDetector(
                       onTap: () => Navigator.push(
@@ -197,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             left: BorderSide(
                               color: _severityColor(
                                 v['severity'],
-                                v['similarityScore']?.toDouble() ?? 0.0,
+                                similarityScore,
                               ),
                               width: 6,
                             ),
@@ -226,19 +234,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   decoration: BoxDecoration(
                                     color: _severityColor(
                                       v['severity'],
-                                      v['similarityScore']?.toDouble() ?? 0.0,
+                                      similarityScore,
                                     ).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
                                     _getSeverityText(
                                       v['severity'],
-                                      v['similarityScore']?.toDouble() ?? 0.0,
+                                      similarityScore,
                                     ),
                                     style: TextStyle(
                                       color: _severityColor(
                                         v['severity'],
-                                        v['similarityScore']?.toDouble() ?? 0.0,
+                                        similarityScore,
                                       ),
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -249,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Detected on: ${v['detectedAt']?.toDate()?.toString().split('.')[0] ?? 'N/A'}',
+                              'Detected on: $detectedOn',
                               style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 12,

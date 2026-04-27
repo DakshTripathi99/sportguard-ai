@@ -26,7 +26,6 @@ class ViolationDetailScreen extends StatelessWidget {
       );
       Navigator.pop(context);
     } catch (e) {
-      debugPrint("Error resolving violation: $e");
       if (!context.mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -44,7 +43,6 @@ class ViolationDetailScreen extends StatelessWidget {
       else
         s = 'low';
     }
-
     switch (s) {
       case 'high':
         return Colors.red;
@@ -66,11 +64,18 @@ class ViolationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final score = ((data['similarityScore'] ?? 0) * 100).round();
-    // Safely handle timestamp
+    // Safe double parsing
+    final similarityScore =
+        (data['similarityScore'] as num?)?.toDouble() ?? 0.0;
+    final score = (similarityScore * 100).round();
+
+    // Safe timestamp parsing
     final timestamp = data['detectedAt'] is Timestamp
-        ? (data['detectedAt'] as Timestamp).toDate().toString()
+        ? (data['detectedAt'] as Timestamp).toDate().toString().split('.')[0]
         : 'Unknown time';
+
+    // Safe match URL
+    final matchUrl = data['matchUrl'] as String? ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFE6EEC9),
@@ -130,16 +135,11 @@ class ViolationDetailScreen extends StatelessWidget {
             _buildDetailRow('Reason', data['reason'] ?? 'N/A'),
             _buildDetailRow(
               'Severity',
-              _getSeverityText(
-                data['severity'],
-                data['similarityScore']?.toDouble() ?? 0.0,
-              ),
-              textColor: _severityColor(
-                data['severity'],
-                data['similarityScore']?.toDouble() ?? 0.0,
-              ),
+              _getSeverityText(data['severity'], similarityScore),
+              textColor: _severityColor(data['severity'], similarityScore),
             ),
             _buildDetailRow('Detected At', timestamp),
+            if (matchUrl.isNotEmpty) _buildDetailRow('Match URL', matchUrl),
 
             const SizedBox(height: 30),
             SizedBox(

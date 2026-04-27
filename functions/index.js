@@ -10,6 +10,11 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { fingerprintImage } = require("./fingerprint");
 const { fingerprintVideo } = require("./videoFingerprint");
 
+// NOTE (Fix #16): embedding.js (Vertex AI text embeddings) was dead code —
+// it was never imported or called. It has been removed from the repo.
+// If semantic similarity search via Vertex AI Matching Engine is added in
+// the future, re-introduce it here and wire it into the fingerprint pipeline.
+
 admin.initializeApp();
 
 const db = admin.firestore();

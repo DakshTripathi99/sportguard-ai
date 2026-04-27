@@ -1,19 +1,24 @@
-# SportGuard AI
+# SportGuard AI — AI/ML Architecture
 
-AI-powered system to detect unauthorized use of sports media across the web.
+## Why Gemini 2.5 Flash?
 
-## Features
-- Image fingerprinting using Gemini Vision
-- Violation detection using Cloud Vision
-- AI-powered violation scoring
-- Legal report generation
-- Anomaly detection
+Gemini 2.5 Flash understands sports context — athletes, teams, venues — not just pixel patterns.
 
-## Tech Stack
-- Firebase Functions
-- Google Cloud Vision API
-- Gemini API
-- Vertex AI Matching Engine
+This semantic understanding survives cropping, filtering, and recompression. We use `gemini-2.5-flash` throughout the `functions/` pipeline for its balance of speed, cost, and multimodal accuracy on sports imagery.
 
-## Demo Flow
-Upload → AI Fingerprint → Web Scan → Violation Detection → Legal Report
+## Why Vertex AI Matching Engine?
+
+Standard image search only finds exact copies. Vertex AI finds similar embeddings,
+meaning even a modified or low-resolution version of a protected image is found.
+
+## Why Cloud Vision API Web Detection?
+
+Cloud Vision scans the entire internet for copies of an image, returning a list of
+all websites where that image or very similar images appear.
+
+### Scoring note — pagesWithMatchingImages vs image-level matches
+
+`pagesWithMatchingImages[].score` is **not** a visual similarity score and is almost
+always `0` or missing. SportGuard derives match scores from `fullMatchingImages`
+(score `0.95`) and `partialMatchingImages` (score `0.75`) instead. Page-only hits
+receive a contextual score (`0.60–0.85`) and are confirmed or dismissed by Gemini.

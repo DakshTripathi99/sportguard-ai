@@ -59,7 +59,7 @@ exports.onAssetUploaded = onObjectFinalized(
       }
 
     } catch (err) {
-      console.error("❌ Upload error:", err.message);
+      console.error("Upload error:", err.message);
     }
   }
 );

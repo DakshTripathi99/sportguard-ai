@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_ap/screens/assets_violations_screen.dart';
+import 'package:SportGuard/screens/violation_detail_screen.dart';
+import 'package:SportGuard/screens/assets_violations_screen.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -70,13 +71,17 @@ class _UploadScreenState extends State<UploadScreen> {
         .child(file.name);
 
     try {
+      final ext = file.extension?.toLowerCase() ?? '';
+      final isVid = _isVideo(file.name);
+      final contentType = ext.isEmpty
+          ? 'application/octet-stream'
+          : isVid
+          ? 'video/$ext'
+          : 'image/$ext';
+
       final uploadTask = storageRef.putData(
         fileBytes,
-        SettableMetadata(
-          contentType: file.extension != null
-              ? 'image/${file.extension}'
-              : 'application/octet-stream',
-        ),
+        SettableMetadata(contentType: contentType),
       );
 
       uploadTask.snapshotEvents.listen((snapshot) {

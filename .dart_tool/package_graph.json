@@ -1,10 +1,10 @@
 {
   "roots": [
-    "flutter_ap"
+    "SportGuard"
   ],
   "packages": [
     {
-      "name": "flutter_ap",
+      "name": "SportGuard",
       "version": "1.0.0+1",
       "dependencies": [
         "cached_network_image",

@@ -1,4 +1,4 @@
-package com.example.flutter_ap
+package com.sportguard.ai
 
 import io.flutter.embedding.android.FlutterActivity
 

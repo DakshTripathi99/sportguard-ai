@@ -1,5 +1,5 @@
 // @dart=3.11
-// Flutter web bootstrap script for package:flutter_ap/main.dart.
+// Flutter web bootstrap script for package:SportGuard/main.dart.
 //
 // Generated file. Do not edit.
 //
@@ -9,7 +9,7 @@
 import 'dart:ui_web' as ui_web;
 import 'dart:async';
 
-import 'package:flutter_ap/main.dart' as entrypoint;
+import 'package:SportGuard/main.dart' as entrypoint;
 import 'web_plugin_registrant.dart' as pluginRegistrant;
 
 typedef _UnaryFunction = dynamic Function(List<String> args);

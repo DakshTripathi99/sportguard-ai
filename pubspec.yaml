@@ -1,5 +1,5 @@
-name: flutter_ap
-description: "A new Flutter project."
+name: SportGuard
+description: "SportGuard is an AI-powered application that allows sports organizations to protect the integrity of digital sports media, preventing digital misappropriation, unauthorized redistribution, and intellectual property violations."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -109,5 +109,3 @@ flutter_launcher_icons:
     generate: true
   image_path: 'assets/icon.png'
 
-  dependencies:
-    firebase_storage: ^12.0.0

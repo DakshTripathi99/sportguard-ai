@@ -20,7 +20,7 @@ async function getTextEmbedding(text) {
 
   const embedding = response.predictions[0].embeddings.values;
 
-  console.log("✅ Embedding size:", embedding.length);
+  console.log("Embedding size:", embedding.length);
 
   return embedding;
 }

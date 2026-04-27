@@ -3,153 +3,186 @@ const admin = require("firebase-admin");
 
 const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// LAZY DB
 const db = () => admin.firestore();
 
-// Trusted domains (skip completely)
+// ---------------------------------------------------------------
+// Domains that are always legitimate — skip AI scoring entirely.
+// ---------------------------------------------------------------
 const WHITELISTED_DOMAINS = [
   "espn.com",
   "fifa.com",
   "bbc.co.uk",
+  "bbc.com",
   "uefa.com",
   "nba.com",
   "youtube.com",
-  "youtu.be"
+  "youtu.be",
+  "icc-cricket.com",
+  "bcci.tv",
+  "iplt20.com",
+  "premierleague.com",
+  "skysports.com",
+  "cricket.com.au",
 ];
 
-// Stock / licensed platforms
+// ---------------------------------------------------------------
+// Licensed stock/wire agencies — never violations.
+// ---------------------------------------------------------------
 const STOCK_DOMAINS = [
   "gettyimages.com",
   "shutterstock.com",
   "reuters.com",
   "apnews.com",
+  "istockphoto.com",
+  "alamy.com",
+  "imago-images.de",
+];
+
+// ---------------------------------------------------------------
+// Social platforms need higher combined confidence before saving.
+// ---------------------------------------------------------------
+const SOCIAL_DOMAINS = [
+  "facebook.com",
+  "instagram.com",
+  "twitter.com",
+  "x.com",
+  "threads.net",
+  "tiktok.com",
 ];
 
 async function scoreViolation(asset, matchUrl, matchScore) {
   try {
-    const domain = new URL(matchUrl).hostname;
+    // --- Parse domain safely ---
+    let domain;
+    try {
+      domain = new URL(matchUrl).hostname.replace(/^www\./, "");
+    } catch {
+      console.warn("⚠️ Invalid URL, skipping:", matchUrl);
+      return null;
+    }
 
-    // ===============================
-    // STEP 1: Skip trusted domains
-    // ===============================
+    // --- Gate 1: Whitelisted domains ---
     if (WHITELISTED_DOMAINS.some((w) => domain.includes(w))) {
       console.log("✅ Whitelisted:", domain);
       return null;
     }
 
-    // ===============================
-    // STEP 2: Skip licensed platforms
-    // ===============================
+    // --- Gate 2: Licensed stock agencies ---
     if (STOCK_DOMAINS.some((s) => domain.includes(s))) {
-      console.log("✅ Licensed platform:", domain);
+      console.log("✅ Licensed stock platform:", domain);
       return null;
     }
 
-    // ===============================
-    // STEP 3: Gemini evaluation (FIXED PROMPT)
-    // ===============================
-    const model = genai.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
+    const isSocial = SOCIAL_DOMAINS.some((s) => domain.includes(s));
+
+    // ---------------------------------------------------------------
+    // Gate 3: Vision score pre-filter.
+    // matchScore here is set by fingerprint.js from the correct Vision
+    // API fields (fullMatchingImages = 0.95, partial = 0.75, page = 0.60-0.85).
+    // We only skip if the score is genuinely too low to be meaningful.
+    // ---------------------------------------------------------------
+    if (matchScore < 0.55) {
+      console.log(`⏭️ Skipped low similarity [${matchScore}]:`, domain);
+      return null;
+    }
+
+    // ---------------------------------------------------------------
+    // AI scoring via Gemini
+    // ---------------------------------------------------------------
+    const model = genai.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-You are an AI that detects UNAUTHORIZED use of sports media.
-
-<<<<<<< HEAD
-STRICT RULES (FOLLOW CAREFULLY):
-=======
-IMPORTANT RULES:
-- Official stock platforms (Getty, Shutterstock, Reuters, AP) → NOT violations
-- Official team or league websites → NOT violations
-- News websites → usually NOT violations
-- Random blogs, reposts, piracy → likely violations
-- Major sports news outlets like ESPN, BBC Sport, Sky Sports → score very low (0.1)
-- Social media reshares without proper licensing → score high (0.85+)
-- Unknown websites reposting sports content without attribution → score 0.9+
->>>>>>> 44aa50492853bbb47cc745aba495e2fc7d6efdf9
-
-- YouTube, Instagram, Facebook → usually NOT violations unless clearly pirated
-- Official sports/news platforms (ESPN, BBC, FIFA, UEFA) → NOT violations
-- Licensed platforms (Getty, Reuters, Shutterstock) → NOT violations
-- Blogs, unknown domains, piracy sites → LIKELY violations
-
-IMPORTANT:
-Be CONSERVATIVE.
-If unsure → return isUnauthorized = false.
-
-Only mark as violation if HIGH confidence (>0.75).
-
-ORIGINAL IMAGE DATA:
+You are an AI that detects UNAUTHORIZED use of sports media content.
+ 
+CLASSIFICATION RULES:
+- Official stock platforms (Getty, Shutterstock, Reuters, AP, Alamy) → NOT a violation
+- Official team, league, or governing body websites → NOT a violation
+- Major licensed sports broadcasters (ESPN, BBC Sport, Sky Sports, Willow TV) → NOT a violation
+- Official social accounts of teams/leagues/players → NOT a violation (confidence ≤ 0.4)
+- Unknown or unofficial websites reposting sports content without clear attribution → violation (confidence 0.85+)
+- Random blogs, aggregators, or piracy sites → violation (confidence 0.90+)
+- Social media accounts that are clearly unofficial fan pages reposting copyrighted content → violation (confidence 0.80+)
+- News websites that are NOT major outlets (local blogs, tabloids) using the image without a license → violation (confidence 0.75+)
+ 
+CONTEXT:
+Original image fingerprint (athlete, team, logos, event):
 ${asset.fingerprintText}
-
-MATCH URL:
+ 
+URL where this image was found:
 ${matchUrl}
-
-DOMAIN:
+ 
+Domain:
 ${domain}
-
-SIMILARITY SCORE:
+ 
+Vision API similarity score (0 to 1, higher = stronger visual match):
 ${matchScore}
-
-Return ONLY JSON:
-
+ 
+Return ONLY valid JSON with no markdown fences or extra text:
 {
   "isUnauthorized": true or false,
-  "confidence": number between 0 and 1,
-  "reason": "short explanation",
+  "confidence": <number 0.0 to 1.0>,
+  "reason": "<one short sentence>",
   "severity": "low" or "medium" or "high"
 }
 `;
 
     const response = await model.generateContent(prompt);
     let text = response.response.text();
-
     text = text.replace(/```json|```/g, "").trim();
 
     let scoring;
     try {
       scoring = JSON.parse(text);
     } catch (err) {
-      console.error("❌ JSON parse failed:", text);
+      console.error("❌ Gemini JSON parse failed:", text);
       return null;
     }
 
-    console.log("🧠 AI Decision:", scoring);
+    console.log(`🧠 AI Decision [${domain}]:`, scoring);
 
-    // ===============================
-    // STEP 4: EXTRA SAFETY FILTER (CRITICAL)
-    // ===============================
-    if (
-      (domain.includes("youtube.com") ||
-        domain.includes("instagram.com") ||
-        domain.includes("facebook.com")) &&
-      scoring.confidence < 0.85
-    ) {
-      console.log("⚠️ Social media filtered:", domain);
-      return null;
+    // ---------------------------------------------------------------
+    // Combined score = blend of Vision similarity + Gemini confidence.
+    // Vision score tells us HOW SIMILAR the image is visually.
+    // Gemini confidence tells us HOW LIKELY it is unauthorized.
+    // Both signals are needed to avoid false positives.
+    // ---------------------------------------------------------------
+    const combinedScore = matchScore * 0.45 + scoring.confidence * 0.55;
+
+    // Social platforms need a higher bar to reduce noise.
+    const threshold = isSocial ? 0.78 : 0.65;
+
+    console.log(
+      `📊 Scores — vision: ${matchScore}, ai: ${scoring.confidence}, combined: ${combinedScore.toFixed(3)}, threshold: ${threshold}`
+    );
+
+    if (!scoring.isUnauthorized || combinedScore < threshold) {
+      console.log(`⏭️ Below threshold or not unauthorized — skipping:`, domain);
+      return { isViolation: false, ...scoring };
     }
 
-    // ===============================
-    // STEP 5: Save violation
-    // ===============================
-    if (scoring.isUnauthorized && scoring.confidence > 0.75) {
-      await db().collection("violations").add({
-        assetId: asset.assetId,
-        orgId: asset.orgId,
-        matchUrl,
-        matchDomain: domain,
-        similarityScore: scoring.confidence,
-        severity: scoring.severity,
-        reason: scoring.reason,
-        geminiExplanation: scoring.reason,
-        status: "unresolved",
-        detectedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+    // ---------------------------------------------------------------
+    // Save violation
+    // ---------------------------------------------------------------
+    await db().collection("violations").add({
+      assetId: asset.assetId,
+      orgId: asset.orgId,
+      matchUrl,
+      matchDomain: domain,
+      visionScore: matchScore,
+      similarityScore: parseFloat(combinedScore.toFixed(3)),
+      aiConfidence: scoring.confidence,
+      combinedScore: parseFloat(combinedScore.toFixed(3)),
+      severity: scoring.severity,
+      reason: scoring.reason,
+      geminiExplanation: scoring.reason,
+      isSocialMedia: isSocial,
+      status: "unresolved",
+      detectedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-      console.log("🚨 Violation saved:", domain);
-    }
+    console.log("🚨 Violation saved:", domain, `(combined: ${combinedScore.toFixed(3)})`);
 
-    return scoring;
+    return { isViolation: true, ...scoring, combinedScore };
 
   } catch (error) {
     console.error("❌ Scoring failed:", error.message);

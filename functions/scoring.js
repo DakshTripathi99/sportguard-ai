@@ -171,7 +171,6 @@ Return ONLY valid JSON with no markdown fences or extra text:
       visionScore: matchScore,
       similarityScore: parseFloat(combinedScore.toFixed(3)),
       aiConfidence: scoring.confidence,
-      combinedScore: parseFloat(combinedScore.toFixed(3)),
       severity: scoring.severity,
       reason: scoring.reason,
       geminiExplanation: scoring.reason,

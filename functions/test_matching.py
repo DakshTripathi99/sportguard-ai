@@ -23,4 +23,4 @@ index.upsert_datapoints(
     ]
 )
 
-print("✅ Datapoint inserted! Matching Engine is working.")
+print("Datapoint inserted! Matching Engine is working.")
